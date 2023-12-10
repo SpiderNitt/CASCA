@@ -2,8 +2,11 @@ from scapy.all import *
 from netfilterqueue import NetfilterQueue
 import socket
 import sys
+from dotenv import load_dotenv
+load_dotenv()
 
 def compress_packet(packet):
+    print(packet)
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
         print(scapy_packet[TCP].payload)
@@ -11,14 +14,15 @@ def compress_packet(packet):
     packet.accept()
 
 def decompress_packet(packet):
+    print(packet)
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
         print(scapy_packet[TCP].payload)
-        # coflow schedule and compression
+        # coflow schedule and decompression
     packet.accept()
 
-COMPRESS_QUEUE_NUM = 1
-DECOMPRESS_QUEUE_NUM = 2
+COMPRESS_QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))
+DECOMPRESS_QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))+1
 
 print('Listening on NFQUEUE queue-num {} for compression'.format(COMPRESS_QUEUE_NUM))
 print('Listening on NFQUEUE queue-num {} for decompression'.format(DECOMPRESS_QUEUE_NUM))

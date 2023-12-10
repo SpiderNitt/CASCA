@@ -1,6 +1,6 @@
 FROM python:3.13.0a1-bookworm
 RUN apt update && apt install -y iptables
-RUN apt install -y build-essential python3-dev libnfnetlink-dev libnetfilter-queue-dev
+RUN apt install -y build-essential python3-dev libnfnetlink-dev libnetfilter-queue-dev iproute2 inetutils-ping
 WORKDIR /app
 COPY . .
 # RUN bash setup.sh

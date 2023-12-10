@@ -8,6 +8,8 @@ services:
     command: "python3 main.py"
     restart: always
     privileged: true
+    environment:
+      - QUEUE_NUM=1
 
   machine2:
     networks:
@@ -16,6 +18,8 @@ services:
     command: "python3 main.py"
     restart: always
     privileged: true
+    environment:
+      - QUEUE_NUM=3
 
 networks:
   casca:
