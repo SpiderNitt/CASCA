@@ -1,3 +1,4 @@
+#!/bin/bash
 # Route the packets to netfilterqueue
 source .env
 if [[ $INCOMING_TRAFFIC == "true" ]]; then
