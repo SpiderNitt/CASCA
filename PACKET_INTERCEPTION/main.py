@@ -2,16 +2,46 @@ from scapy.all import *
 from netfilterqueue import NetfilterQueue
 import socket
 import sys
-from dotenv import load_dotenv
-load_dotenv()
+import netifaces
+import zstandard as zstd
 
-def compress_packet(packet):
-    print(packet)
+# Important stuffs about zstandard package
+# write_content_size parameter improves performance
+# one-shot vs streaming modes
+# dictionaries
+# compression_params?
+# Multithreading
+
+def process_packet(packet):
+    payload = packet.get_payload()
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
-        print(scapy_packet[TCP].payload)
+        source_ip = scapy_packet[IP].src
+        # Outgoing packets(Compression)
+        if source_ip in host_ips:
+            # print("Outgoing Traffic:")
+            # print(scapy_packet[TCP].summary())
+            # print(payload)
+            compressed_payload = cctx.compress(payload)
+            print("Original Payload size:", len(payload))
+            print("Compressed Payload size:", len(compressed_payload))
+        else: # Incoming packets(Decompression)
+            print("Incoming Traffic:")
+            # print(scapy_packet[TCP].summary())
+            # print(payload)
+            decompressed_payload = dctx.decompress(payload)
+            print("Original Payload size:", len(payload))
+            print("Decompressed Payload size:", len(decompressed_payload))
+        # print(scapy_packet.show())
         # coflow schedule and compression
     packet.accept()
+   
+interfaces = netifaces.interfaces()
+host_ips = []
+for interface in interfaces:
+    addrs = netifaces.ifaddresses(interface)
+    if 2 in addrs.keys():
+        host_ips.append(addrs[netifaces.AF_INET][0]['addr'])
 
 def decompress_packet(packet):
     print(packet)
@@ -27,19 +57,8 @@ DECOMPRESS_QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))+1
 print('Listening on NFQUEUE queue-num {} for compression'.format(COMPRESS_QUEUE_NUM))
 print('Listening on NFQUEUE queue-num {} for decompression'.format(DECOMPRESS_QUEUE_NUM))
 
-nfqueue1 = NetfilterQueue()
-nfqueue2 = NetfilterQueue()
-nfqueue1.bind(COMPRESS_QUEUE_NUM, compress_packet)
-nfqueue2.bind(DECOMPRESS_QUEUE_NUM, decompress_packet)
-s1 = socket.fromfd(nfqueue1.get_fd(), socket.AF_UNIX, socket.SOCK_STREAM)
-s2 = socket.fromfd(nfqueue2.get_fd(), socket.AF_UNIX, socket.SOCK_STREAM)
-try:
-    nfqueue1.run_socket(s1)
-    nfqueue2.run_socket(s2)
-except KeyboardInterrupt:
-    sys.stdout.write('Exiting \n')
-
-s1.close()
-s2.close()
-nfqueue1.unbind()
-nfqueue2.unbind()
+cctx = zstd.ZstdCompressor()
+dctx = zstd.ZstdDecompressor()
+nfqueue = NetfilterQueue()
+nfqueue.bind(QUEUE_NUM, process_packet)
+nfqueue.run()

@@ -1,4 +1,5 @@
 scapy
 netfilterqueue
-dotenv
+python-dotenv
+netifaces
 # nfqp3
