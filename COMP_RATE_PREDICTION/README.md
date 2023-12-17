@@ -1,2 +1,11 @@
 Enable venv
-Update COMP_RATE_PREDICTION/lib/python3.9/site-packages/stressinjector/cpu.py with COMP_RATE_PREDICTION/update_cpu.py
+```bash
+python3 -m venv .
+source bin/activate
+pip3 install -r requirements.txt
+```
+
+Update cpu stress script
+```bash
+cp update_cpu.py ./lib/python3.9/site-packages/stressinjector/cpu.py
+```
