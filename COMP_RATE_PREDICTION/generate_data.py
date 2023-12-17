@@ -13,9 +13,9 @@ path = sys.argv[1]
 
 # Run this code on different hardware specifications
 
-with open(output_file,'w',newline="") as csvfile:
+with open(output_file,'a',newline="") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["Timestamp", "No of CPUs", "CPU Utilization (%)", "CPU Frequency (Mhz)" "Memory (MB)", "Memory Utilization (%)", "Compression Speed (MB/s)", "Compression Ratio"])
+    writer.writerow(["Timestamp", "No of CPUs", "CPU Utilization (%)", "CPU Frequency (Mhz)", "Memory (MB)", "Memory Utilization (%)", "Compression Speed (MB/s)", "Compression Ratio", "Packet size difference rate"])
 
     compressor = zstandard.ZstdCompressor(level=3)
 
@@ -51,9 +51,10 @@ with open(output_file,'w',newline="") as csvfile:
 
                 compressed_data_size += len(compressed_data)
                 compression_speed = total_data_size / compression_time / (1024*1024) #MB/s
-                compression_ratio = total_data_size / compressed_data_size
-                print(time.strftime("%Y-%m-%d %H:%M:%S"), cpus, cpu_util, cpu_freq, memory, mem_util, compression_speed, compression_ratio)
-                writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), cpus, cpu_util, cpu_freq, memory, mem_util, compression_speed, compression_ratio])
+                compression_ratio = total_data_size / compressed_data_size;packet_size_diff_rate = (total_data_size - compressed_data_size) / compression_time / (1024*1024);
+
+                print(time.strftime("%Y-%m-%d %H:%M:%S"), cpus, cpu_util, cpu_freq, memory, mem_util, compression_speed, compression_ratio, packet_size_diff_rate)
+                writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), cpus, cpu_util, cpu_freq, memory, mem_util, compression_speed, compression_ratio, packet_size_diff_rate])
                 time.sleep(0.1)
             
             print(f"System statistics recorded to: {output_file}")
