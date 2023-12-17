@@ -24,9 +24,9 @@ with open(output_file,'a',newline="") as csvfile:
 # Should cycle time be a variable?
 # No of processes?
 
-    for c_i in range(0,100,5): # CPU limit 0-100%
+    for c_i in range(0,100,10): # CPU limit 0-100%
         for m_i in range(0,math.ceil(memory/1024)-1,1): # Memory usage 0-memory
-            for i in range(10):
+            for i in range(5):
                 injector.CPUStress(limit=c_i) # Inject CPU stress
                 if m_i>0:
                     injector.MemoryStress(gigabytes=m_i) # Inject memory stress
