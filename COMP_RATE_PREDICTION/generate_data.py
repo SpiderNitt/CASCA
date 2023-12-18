@@ -31,13 +31,14 @@ with open(output_file,'a',newline="") as csvfile:
                 if m_i>0:
                     injector.MemoryStress(gigabytes=m_i) # Inject memory stress
                 cpu_util = psutil.cpu_percent()
-                mem_util = psutil.virtual_memory().percent
+                mem_util = psutil.virtual_memory().percent # Make it run in background when performing compression (Pending)
                 cpu_freq = psutil.cpu_freq().current # Get CPU frequency in Mhz
 
                 # Initialize variables for compression
                 total_data_size = 0
                 compressed_data_size = 0
 
+                # Use a tcp packet instead
                 with open(path,'rb') as input_file:
                     data = input_file.read()
                     total_data_size += len(data)
