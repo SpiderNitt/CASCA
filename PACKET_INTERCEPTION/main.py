@@ -3,6 +3,9 @@ from netfilterqueue import NetfilterQueue
 import netifaces
 import zstandard as zstd
 from dotenv import load_dotenv
+# import zlib
+# import os
+# import json 
 load_dotenv()
 
 # Important stuffs about zstandard package
@@ -19,19 +22,23 @@ def process_packet(packet):
         source_ip = scapy_packet[IP].src
         # Outgoing packets(Compression)
         if source_ip in host_ips:
-            # print("Outgoing Traffic:")
-            # print(scapy_packet[TCP].summary())
-            # print(payload)
-            compressed_payload = cctx.compress(payload)
+            print("Outgoing Traffic:")
+            print(scapy_packet[TCP].summary())
+            #print(payload)
+            #compressed_payload = cctx.compress(payload)
+            #compressed_payload = zlib.compress(payload,level=9)
             print("Original Payload size:", len(payload))
             print("Compressed Payload size:", len(compressed_payload))
+            packet.set_payload(compressed_payload)
         else: # Incoming packets(Decompression)
             print("Incoming Traffic:")
-            # print(scapy_packet[TCP].summary())
-            # print(payload)
-            decompressed_payload = dctx.decompress(payload)
+            print(scapy_packet[TCP].summary())
+            #print(payload)
+            #decompressed_payload = dctx.decompress(payload)
+            #decompressed_payload = zlib.decompress(payload)
             print("Original Payload size:", len(payload))
             print("Decompressed Payload size:", len(decompressed_payload))
+            packet.set_payload(decompressed_payload)
         # print(scapy_packet.show())
         # coflow schedule and compression
     packet.accept()

@@ -2,4 +2,5 @@ scapy
 netfilterqueue
 python-dotenv
 netifaces
+zstandard
 # nfqp3
