@@ -59,7 +59,7 @@ if len(sys.argv) != 5:
 
 community_string = sys.argv[1]
 router_ip_address = sys.argv[2]
-time_interval_seconds = int(sys.argv[3])
+time_interval_seconds = float(sys.argv[3])
 interface_index = int(sys.argv[4])
 
 estimate_queuing_delay(community_string, router_ip_address, time_interval_seconds, interface_index)
