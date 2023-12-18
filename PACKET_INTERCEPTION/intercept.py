@@ -39,7 +39,7 @@ def process_packet(packet):
         # coflow schedule and compression
     packet.accept()
 
-i = 1
+i = 11
 global payloads
 with open(f"./captured_packets/captured_payloads{i}.json") as f:
     payloads = json.load(f)['payloads']

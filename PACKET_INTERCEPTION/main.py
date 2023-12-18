@@ -37,7 +37,7 @@ def process_packet(packet):
             #decompressed_payload = dctx.decompress(payload)
             #decompressed_payload = zlib.decompress(payload)
             print("Original Payload size:", len(payload))
-            print("Payloads length: ",len(payloads))
+            # print("Payloads length: ",len(payloads))
             # print("Decompressed Payload size:", len(decompressed_payload))
             # packet.set_payload(decompressed_payload)
         # print(scapy_packet.show())
@@ -54,12 +54,18 @@ for interface in interfaces:
 QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))
 
 samples = []
-for i in range(1,6):
+for i in range(1,15):
     with open(f'./captured_packets/captured_payloads{i}.json') as f:
-        samples+=json.load(f)['payloads']
+        samples.append(json.dumps(f))
+# files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
+# for file_name in files:
+#         file_path = os.path.join('./github', file_name)
+#         with open(file_path, 'r') as file:
+#             data = file.read()
+#             samples.append(str(data))
 print(len(samples))
 samples = [bytes(sample, 'utf-8') for sample in samples]
-dict_data = zstd.train_dictionary(len(samples),samples)
+dict_data = zstd.train_dictionary(275,samples)
 with open("dict_data", "w") as f:
     f.write(str(dict_data.as_bytes()))
 
