@@ -72,7 +72,8 @@ def process_packet(packet, transit_time_cache):
             global sum_samples
             global avg_compression_time
             global avg_compression_ratio
-            if(sum_samples <=2 or check_condition(len(payload), transit_time_cache)):
+            #if(sum_samples <=2 or check_condition(len(payload), transit_time_cache)):
+            if True:
                 compressiontime = time.time()
                 compressed_payload = cctx.compress(payload)
                 compressiontime = time.time() - compressiontime
