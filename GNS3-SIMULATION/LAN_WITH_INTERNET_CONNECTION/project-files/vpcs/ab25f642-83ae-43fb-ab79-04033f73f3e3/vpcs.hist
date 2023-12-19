@@ -1,7 +1,0 @@
-ping 192.168.88.254
-ip dhcp
-ip dhcp
-ping 192.168.88.254
-exit
-?
-quit
