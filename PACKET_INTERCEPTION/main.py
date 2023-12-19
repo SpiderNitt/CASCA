@@ -5,9 +5,12 @@ import zstandard as zstd
 from dotenv import load_dotenv
 import subprocess
 import json 
+import multiprocessing
+import time
 # import zlib
 # import os
 load_dotenv()
+
 
 if len(sys.argv) != 2:
     print("python main.py host_id ")
@@ -23,37 +26,38 @@ time_interval = 1.5
 # compression_params?
 # Multithreading
 
-avg_compression_ratio = 0
-sum_samples = 0 
-avg_compression_time = 0
+avg_compression_ratio = 1.5
+sum_samples = 1 
+avg_compression_time = 0.01
 
 def compress_time():
-    print("compress")
+    global avg_compression_time
     return avg_compression_time
 
 def decompress_time():
-    print("decompress")
-    return avg_comrpession_time
+    global avg_compression_time
+    return avg_compression_time
 
-def transit_time(file_size, time_interval, host_id):
-    print("time")
-    
-    args = ["python", "TRANSIT_TIME/__main__.py", str(file_size), str(time_interval), str(host_id)]
-    print(' '.join(args))
+def transit_time(file_size, time_interval, host_id, transit_time_cache):
+    args = ["python", "TRANSIT_TIME/main.py", str(file_size), str(time_interval), str(host_id)]
 
-    return float(subprocess.run(args, text=True, capture_output=True).stdout.split())
+    result =  subprocess.run(args, text=True, capture_output=True).stdout.split('\n').strip()
+    transit_time_cache.value = result[0]
     
 
-def check_condition(file_size):
-    print("hello")
-    lhs = compress_time() + transit_time(file_size / avg_compression_time, time_interval, host_id) + decompress_time() 
-    print(lhs)
-    rhs = transit_time(file_size , time_interval, host_id)
-    print(rhs)
-    print(lhs<rhs)
+
+def update_transit_time(file_size, time_interval, host_id, transit_time_cache):
+    while True:
+        transit_tie(file_size, time_interval, host_id, transit_time_cache)
+        time.sleep(time_interval)
+
+def check_condition(file_size, transit_time_cache):
+    lhs = compress_time() +  file_size / (transit_time_cache.value *  avg_compression_ratio) + decompress_time() 
+    rhs = file_size / transit_time_cache.value
+
     return lhs < rhs
 
-def process_packet(packet):
+def process_packet(packet, transit_time_cache):
     payload = packet.get_payload()
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
@@ -67,7 +71,7 @@ def process_packet(packet):
             global sum_samples
             global avg_compression_time
             global avg_compression_ratio
-            if(sum_samples <=2 or check_condition(len(payload))):
+            if(sum_samples <=2 or check_condition(len(payload), transit_time_cache)):
                 compressiontime = time.time()
                 compressed_payload = cctx.compress(payload)
                 compressiontime = time.time() - compressiontime
@@ -94,36 +98,48 @@ def process_packet(packet):
         # coflow schedule and compression
     packet.accept()
 
-interfaces = netifaces.interfaces()
-host_ips = []
-for interface in interfaces:
-    addrs = netifaces.ifaddresses(interface)
-    if 2 in addrs.keys():
-        host_ips.append(addrs[netifaces.AF_INET][0]['addr'])
+if __name__ == '__main__':
+    with multiprocessing.Manager() as manager:
 
-QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))
+        transit_time_cache = manager.Value('f',1.0)
 
-samples = []
-for i in range(1,16):
-    with open(f'./captured_packets/captured_payloads{i}.json') as f:
-        samples+=(json.load(f)['payloads'])
-
-# files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
-# for file_name in files:
-#         file_path = os.path.join('./github', file_name)
-#         with open(file_path, 'r') as file:
-#             data = file.read()
-#             samples.append(str(data))
-
-print(len(samples))
-samples = [bytes(sample, 'utf-8') for sample in samples]
-dict_data = zstd.train_dictionary(275,samples)
-with open("dict_data", "w") as f:
-    f.write(str(dict_data.as_bytes()))
+        pool = multiprocessing.Pool(processes = 1)
 
 
-cctx = zstd.ZstdCompressor(dict_data=dict_data)
-dctx = zstd.ZstdDecompressor(dict_data=dict_data)
-nfqueue = NetfilterQueue()
-nfqueue.bind(QUEUE_NUM, process_packet)
-nfqueue.run()
+        interfaces = netifaces.interfaces()
+        host_ips = []
+        for interface in interfaces:
+            addrs = netifaces.ifaddresses(interface)
+            if 2 in addrs.keys():
+                host_ips.append(addrs[netifaces.AF_INET][0]['addr'])
+
+        QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))
+
+        samples = []
+        for i in range(1,16):
+            with open(f'./captured_packets/captured_payloads{i}.json') as f:
+                samples+=(json.load(f)['payloads'])
+
+        # files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
+        # for file_name in files:
+        #         file_path = os.path.join('./github', file_name)
+        #         with open(file_path, 'r') as file:
+        #             data = file.read()
+        #             samples.append(str(data))
+
+        print(len(samples))
+        samples = [bytes(sample, 'utf-8') for sample in samples]
+        dict_data = zstd.train_dictionary(275,samples)
+        with open("dict_data", "w") as f:
+            f.write(str(dict_data.as_bytes()))
+
+        pool.apply_async(update_transit_time, (len(dict_data), time_interval, host_id, transit_time_cache))
+
+        cctx = zstd.ZstdCompressor(dict_data=dict_data)
+        dctx = zstd.ZstdDecompressor(dict_data=dict_data)
+        nfqueue = NetfilterQueue()
+        nfqueue.bind(QUEUE_NUM, lambda packet: process_packet(packet, transit_time_cache))
+        nfqueue.run()
+
+        pool.close()
+        pool.join()
