@@ -11,6 +11,9 @@ import time
 # import os
 load_dotenv()
 
+# Define a flag to indicate whether a packet is compressed
+COMPRESSION_FLAG = b'\x01'
+DECOMPRESSION_FLAG = b'\x00'
 
 if len(sys.argv) != 2:
     print("python main.py host_id ")
