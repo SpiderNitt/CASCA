@@ -41,7 +41,7 @@ def transit_time(file_size, time_interval, host_id):
     args = ["python", "../TRANSIT_TIME/main.py", str(file_size), str(time_interval), str(host_id)]
     print(' '.join(args))
 
-    return float(subprocess.run(args, text=True).split())
+    return float(subprocess.run(args, text=True, capture_output=True).stdout.split())
     
 
 def check_condition(file_size):
