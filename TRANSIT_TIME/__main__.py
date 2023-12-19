@@ -1,12 +1,12 @@
 import subprocess
 import sys
 import concurrent.futures
-
+from roundTripTime import rtt
+from transmissionTime import calculate_transmission_time
 
 def get_round_trip_time(host_ip):
-    round_trip_args = ["python", "rtt.py", host_ip, str(time_interval/20), str(time_interval)]
-    result = subprocess.run(round_trip_args, capture_output=True, text=True)
-    return float(result.stdout.strip()) / 2
+    result = rtt(host_ip, time_interval/20, time_interval)
+    return float(result) / 2
 
 def get_bandwidth(host_ip):
     result = subprocess.run(["./bandwidth.sh", host_ip, str(time_interval)], stdout=subprocess.PIPE, text=True)
@@ -14,11 +14,11 @@ def get_bandwidth(host_ip):
     return int(output_lines[0].rstrip('Mbits/sec').strip())
 
 def get_transmission_time(file_size, bandwidth):
-    transmission_time_args = ["python", "transmissionTime.py", file_size, str(bandwidth)]
-    result = subprocess.run(transmission_time_args, capture_output=True, text=True)
-    return float(result.stdout.strip())
+    result = calculate_transmission_time(float(file_size), float(bandwidth))
+    return float(result)
 
 def get_routing_delay(community, host_ip):
+    
     routing_delay_args = ["python", "routingDelay/", community, host_ip, "routingDelay/", str(time_interval)]
     result = subprocess.run(routing_delay_args, capture_output=True, text=True)
     return float(result.stdout.strip())
@@ -39,6 +39,7 @@ def get_vals(community, host_ip, file_size):
 
         routing_delay = routing_delay_future.result()
         print(f"Routing Delay: {routing_delay}")
+        routing_delay = 0
 
         transit_time = single_trip_time + transmission_time + routing_delay
         print(f"Total Transit time : {transit_time}")
