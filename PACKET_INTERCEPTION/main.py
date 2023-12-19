@@ -17,7 +17,7 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 host_id = sys.argv[1]
-time_interval = 1.5
+time_interval = 0.5
 
 # Important stuffs about zstandard package
 # write_content_size parameter improves performance
@@ -40,16 +40,17 @@ def decompress_time():
 
 def transit_time(file_size, time_interval, host_id, transit_time_cache):
     args = ["python", "TRANSIT_TIME/main.py", str(file_size), str(time_interval), str(host_id)]
-
     result =  subprocess.run(args, text=True, capture_output=True).stdout.split('\n').strip()
+    print(result[0])
     transit_time_cache.value = result[0]
     
 
 
 def update_transit_time(file_size, time_interval, host_id, transit_time_cache):
     while True:
-        transit_tie(file_size, time_interval, host_id, transit_time_cache)
-        time.sleep(time_interval)
+        transit_time(file_size, time_interval, host_id, transit_time_cache)
+        print(transit_time_cache.value)
+        time.sleep(time_interval*20)
 
 def check_condition(file_size, transit_time_cache):
     lhs = compress_time() +  file_size / (transit_time_cache.value *  avg_compression_ratio) + decompress_time() 
@@ -120,8 +121,8 @@ if __name__ == '__main__':
             with open(f'./captured_packets/captured_payloads{i}.json') as f:
                 samples+=(json.load(f)['payloads'])
 
-        # files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
-        # for file_name in files:
+        files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
+        #for file_name in files:
         #         file_path = os.path.join('./github', file_name)
         #         with open(file_path, 'r') as file:
         #             data = file.read()
