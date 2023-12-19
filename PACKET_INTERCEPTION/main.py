@@ -34,7 +34,7 @@ def process_packet(packet):
             print("Incoming Traffic:")
             # print(scapy_packet[TCP].summary())
             #print(payload)
-            #decompressed_payload = dctx.decompress(payload)
+            # decompressed_payload = dctx.decompress(payload)
             #decompressed_payload = zlib.decompress(payload)
             print("Original Payload size:", len(payload))
             # print("Payloads length: ",len(payloads))
@@ -54,9 +54,9 @@ for interface in interfaces:
 QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))
 
 samples = []
-for i in range(1,15):
+for i in range(1,16):
     with open(f'./captured_packets/captured_payloads{i}.json') as f:
-        samples.append(json.dumps(f))
+        samples+=(json.load(f)['payloads'])
 # files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
 # for file_name in files:
 #         file_path = os.path.join('./github', file_name)
