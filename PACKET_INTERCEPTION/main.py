@@ -38,7 +38,7 @@ def decompress_time():
 def transit_time(file_size, time_interval, host_id):
     print("time")
     
-    args = ["python", "../TRANSIT_TIME/__main__.py", str(file_size), str(time_interval), str(host_id)]
+    args = ["python", "TRANSIT_TIME/__main__.py", str(file_size), str(time_interval), str(host_id)]
     print(' '.join(args))
 
     return float(subprocess.run(args, text=True, capture_output=True).stdout.split())
