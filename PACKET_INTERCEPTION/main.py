@@ -21,7 +21,16 @@ def process_packet(packet):
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
         ip_header = scapy_packet[IP]
-        tcp_header = scapy_packet[TCP]
+        if scapy_packet.haslayer(TCP)==False:
+            scapy_packet[TCP] = None
+        else:
+            tcp_header = scapy_packet[TCP]
+
+        # if scapy_packet.haslayer(UDP)==False:
+        #     scapy_packet[UDP] = None
+        # elif scapy_packet.haslayer(Raw)==False:
+        #     scapy_packet[Raw] = None
+        
         source_ip = ip_header.src
         payload = bytes(scapy_packet[Raw])
         # Outgoing packets(Compression)
@@ -32,28 +41,27 @@ def process_packet(packet):
             # with open('README.md','rb') as f:
             #     payload = f.read()
             # compressed_payload = cctx.compress(payload)
-            compressed_payload = lz4.frame.compress(payload)
-            # Consider 
+            
+            compressed_payload = cctx.compress(payload)
+            # Consider UDP
             compressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
             compressed_packet = compressed_packet / compressed_payload
-            #compressed_payload = zlib.compress(payload,level=9)
             print("Original Payload size:", len(payload))
             print("Compressed Payload size:", len(compressed_payload))
             # compressed_packet.accept()
-            packet.set_payload(compressed_packet)
+            packet.set_payload(bytes(compressed_packet))
         else: # Incoming packets(Decompression)
             print(scapy_packet[IP].src)
             if scapy_packet[IP].src=="192.168.43.167":
-                decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
                 print("Incoming Traffic:")
                 # print(scapy_packet[TCP].summary())
                 #print(payload)
-                try:
-                    decompressed_packet = dctx.decompress(payload)
-                except zstd.ZstdError:
-                    print("Decompression Error!")
-                    pass
-                decompressed_payload = dctx.decompress(payload)
+                # start_time = time.time()
+                decompressed_payload = dctx.decompress(payload, max_output_size=1048576)
+                # end_time = time.time()
+                # print(start_time-end_time)
+                decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+
                 decompressed_packet = decompressed_packet / decompressed_payload
 
                 #decompressed_payload = zlib.decompress(payload)
@@ -62,7 +70,7 @@ def process_packet(packet):
                 print("Decompressed Payload size:", len(decompressed_payload))
                 # packet.set_payload(decompressed_payload)
                 # decompressed_packet.accept()
-                packet.set_payload(decompressed_packet)
+                packet.set_payload(bytes(decompressed_packet))
         # print(scapy_packet.show())
         # coflow schedule and compression
     packet.accept()
@@ -94,7 +102,7 @@ with open("dict_data", "w") as f:
     f.write(str(dict_data.as_bytes()))
 
 cctx = zstd.ZstdCompressor(level=3,write_content_size=False)
-dctx = zstd.ZstdDecompressor(max_window_size=2147483648)
+dctx = zstd.ZstdDecompressor()
 nfqueue = NetfilterQueue()
 nfqueue.bind(QUEUE_NUM, process_packet)
 nfqueue.run()
