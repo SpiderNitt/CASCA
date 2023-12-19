@@ -4,3 +4,4 @@ python-dotenv
 netifaces
 zstandard
 # nfqp3
+lz4
