@@ -11,11 +11,14 @@ def process_packet(packet):
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
         ip_header = scapy_packet[IP]
-        if scapy_packet.haslayer(TCP)==False:
-            scapy_packet[TCP] = None
-        else:
+        #if scapy_packet.haslayer(TCP)==False:
+        #    scapy_packet[TCP] = None
+        if scapy_packet.haslayer(TCP)==True:
             tcp_header = scapy_packet[TCP]
-
+        #elif scapy_packet.haslayer(UDP)==False:
+        #    scapy_packet[UDP]=None
+        elif scapy_packet.haslayer(UDP)==True:
+            udp_header=scapy_packet[UDP]
         # if scapy_packet.haslayer(UDP)==False:
         #     scapy_packet[UDP] = None
         # elif scapy_packet.haslayer(Raw)==False:
@@ -30,7 +33,10 @@ def process_packet(packet):
             end_time = time.time()
             print("Compression time: ", end_time-start_time)
             # Consider UDP
-            compressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+            if scapy_packet.haslayer(TCP)==True:
+                compressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+            elif scapy_packet.haslayer(UDP)==True:
+                compressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / UDP(sport=udp_header.sport,dport=udp_header.dport)     
             compressed_packet = compressed_packet / compressed_payload
             print("Original Payload size:", len(payload))
             print("Compressed Payload size:", len(compressed_payload))
@@ -41,7 +47,10 @@ def process_packet(packet):
             decompressed_payload = dctx.decompress(payload, max_output_size=1048576)
             end_time = time.time()
             print("Decompression time: ", end_time-start_time)
-            decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+            if scapy_packet.haslayer(TCP)==True:
+                decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+            elif scapy_packet.haslayer(UDP)==True:
+                decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / UDP(sport=udp_header.sport,dport=udp_header.dport)
             decompressed_packet = decompressed_packet / decompressed_payload
             print("Original Payload size:", len(payload))
             print("Decompressed Payload size:", len(decompressed_payload))
