@@ -62,13 +62,17 @@ def process_packet(packet, transit_time_cache):
     payload = packet.get_payload()
     scapy_packet = IP(packet.get_payload())
     if scapy_packet.haslayer(Raw):
-        source_ip = scapy_packet[IP].src
-        # Outgoing packets(Compression)
+        ip_header = scapy_packet[IP]
+        source_ip = ip_header.src
+        payload = bytes(scapy_packet[Raw])
+
+        if scapy_packet.haslayer(TCP)==False:
+            scapy_packet[TCP] = None
+        else:
+            tcp_header = scapy_packet[TCP]
         #if source_ip in host_ips :
         if True :
             print("Outgoing Traffic:")
-            # print(scapy_packet[TCP].summary())
-            #print(payload)
             global sum_samples
             global avg_compression_time
             global avg_compression_ratio
@@ -80,30 +84,32 @@ def process_packet(packet, transit_time_cache):
                 sum_samples+=1;
                 avg_compression_time = (sum_samples -1)*avg_compression_time + compressiontime / sum_samples
                 avg_compression_ratio = ((sum_samples - 1)*avg_compression_ratio + len(payload)/len(compressed_payload) )/ sum_samples
+                # Consider UDP
+                compressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+                compressed_packet = compressed_packet / compressed_payload
             else:
                 compressed_payload = payload
             #compressed_payload = zlib.compress(payload,level=9)
             print("Original Payload size:", len(payload))
             print("Compressed Payload size:", len(compressed_payload))
-            packet.set_payload(compressed_payload)
+            packet.set_payload(bytes(compressed_packet))
         else: # Incoming packets(Decompression)
             print("Incoming Traffic:")
-            # print(scapy_packet[TCP].summary())
-            #print(payload)
-            decompressed_payload = dctx.decompress(payload)
-            #decompressed_payload = zlib.decompress(payload)
+            start_time = time.time()
+            decompressed_payload = dctx.decompress(payload, max_output_size=1048576)
+            end_time = time.time()
+            print("Decompression time: ", end_time-start_time)
+            decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
+            decompressed_packet = decompressed_packet / decompressed_payload
             print("Original Payload size:", len(payload))
-            # print("Payloads length: ",len(payloads))
             print("Decompressed Payload size:", len(decompressed_payload))
-            packet.set_payload(decompressed_payload)
-        # print(scapy_packet.show())
-        # coflow schedule and compression
+            packet.set_payload(bytes(decompressed_packet))
     packet.accept()
 
 if __name__ == '__main__':
     with multiprocessing.Manager() as manager:
 
-        transit_time_cache = manager.Value('f',1.0)
+        transit_time_cache = manager.Value('f',0.001)
 
         pool = multiprocessing.Pool(processes = 1)
 
@@ -118,16 +124,13 @@ if __name__ == '__main__':
         QUEUE_NUM = int(os.environ.get("QUEUE_NUM"))
 
         samples = []
-        for i in range(1,16):
-            with open(f'./captured_packets/captured_payloads{i}.json') as f:
-                samples+=(json.load(f)['payloads'])
 
         files = [f for f in os.listdir('./github') if os.path.isfile(os.path.join('./github', f))]
-        #for file_name in files:
-        #         file_path = os.path.join('./github', file_name)
-        #         with open(file_path, 'r') as file:
-        #             data = file.read()
-        #             samples.append(str(data))
+        for file_name in files:
+                 file_path = os.path.join('./github', file_name)
+                 with open(file_path, 'r') as file:
+                     data = file.read()
+                     samples.append(str(data))
 
         print(len(samples))
         samples = [bytes(sample, 'utf-8') for sample in samples]
@@ -137,8 +140,8 @@ if __name__ == '__main__':
 
         pool.apply_async(update_transit_time, (len(dict_data), time_interval, host_id, transit_time_cache))
 
-        cctx = zstd.ZstdCompressor(dict_data=dict_data)
-        dctx = zstd.ZstdDecompressor(dict_data=dict_data)
+        cctx = zstd.ZstdCompressor(level=3,write_content_size=False)
+        dctx = zstd.ZstdDecompressor()
         nfqueue = NetfilterQueue()
         nfqueue.bind(QUEUE_NUM, lambda packet: process_packet(packet, transit_time_cache))
         nfqueue.run()
