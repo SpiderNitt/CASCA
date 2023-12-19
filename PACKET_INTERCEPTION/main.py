@@ -90,18 +90,31 @@ def process_packet(packet, transit_time_cache):
                 # Consider UDP
                 compressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
                 compressed_packet = compressed_packet / compressed_payload
+
+                compressed_payload = COMPRESSION_FLAG + compressed_payload
             else:
                 compressed_payload = payload
+                compressed_payload = DECOMPRESSION_FLAG + payload
             #compressed_payload = zlib.compress(payload,level=9)
             print("Original Payload size:", len(payload))
             print("Compressed Payload size:", len(compressed_payload))
             packet.set_payload(bytes(compressed_packet))
+
+            
         else: # Incoming packets(Decompression)
-            print("Incoming Traffic:")
-            start_time = time.time()
-            decompressed_payload = dctx.decompress(payload, max_output_size=1048576)
-            end_time = time.time()
-            print("Decompression time: ", end_time-start_time)
+
+            if payload.startswith(COMPRESSION_FLAG):
+                compressed_payload= payload[1:]
+
+                print("Incoming Traffic:")
+                start_time = time.time()
+                decompressed_payload = dctx.decompress(payload, max_output_size=1048576)
+                end_time = time.time()
+                print("Decompression time: ", end_time-start_time)
+
+            else:
+                packet.set_payload(payload)
+
             decompressed_packet = IP(src=ip_header.src, dst=ip_header.dst) / TCP(sport=tcp_header.sport,dport=tcp_header.dport)
             decompressed_packet = decompressed_packet / decompressed_payload
             print("Original Payload size:", len(payload))
