@@ -1,0 +1,6 @@
+bin/
+include
+lib/
+share/
+.env
+lib64
